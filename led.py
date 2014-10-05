@@ -1,29 +1,27 @@
 import RPi.GPIO as GPIO
 import time
+import math
 
 GPIO.setmode(GPIO.BOARD)
-GPIO.setup(7,GPIO.OUT)
-GPIO.setup(11,GPIO.OUT)
-GPIO.setup(15,GPIO.OUT)
-GPIO.setup(13,GPIO.OUT)
-#GPIO.setup(36,GPIO.OUT)
 
-for i in range(50):
-    GPIO.output(15,True)
-    GPIO.output(11,True)
-    GPIO.output(7,False)
-    GPIO.output(13,False)
-    time.sleep(0.08)
-    GPIO.output(15,False)
-    GPIO.output(11,False)
-    GPIO.output(7,True)
-    GPIO.output(13,True)
-    time.sleep(0.08)
+activePins = [7,11,15,13]
+SLEEP_DELAY = 0.04
+NUMBER_OF_ITERATIONS = int(math.floor(1/SLEEP_DELAY))
 
-GPIO.output(15,False)
-GPIO.output(11,False)
-GPIO.output(7,False)
-GPIO.output(13,False)
+print "Number of iterations: ", NUMBER_OF_ITERATIONS
+
+for i in range(len(activePins)):
+    GPIO.setup(activePins[i],GPIO.OUT)
+
+for i in range(NUMBER_OF_ITERATIONS):
+    for i in range(len(activePins)):
+        time.sleep(SLEEP_DELAY)
+        GPIO.output(activePins[i],True)
+        time.sleep(SLEEP_DELAY)
+        GPIO.output(activePins[i],False)
+
+for i in range(len(activePins)):
+    GPIO.output(activePins[i],False)
 GPIO.cleanup()
 
 
