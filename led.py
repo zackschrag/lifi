@@ -1,79 +1,146 @@
 import RPi.GPIO as GPIO
 import time
 import math
+import sys
 from morse import encodeToMorse
 from morse import decodeMorse
 
+class LIFIClient:  
+    activePins = [7, 11, 13, 15]
+    SLEEP_DELAY = 0.05
 
-#def flashMorse(message, GPIO):
-#    morse = encodeToMorse(message)
+    def sendMessage(self, message):
+        GPIO.setmode(GPIO.BOARD)
+            
+        for i in range(len(self.activePins)):
+            GPIO.setup(self.activePins[i],GPIO.OUT)
+
+        ctr = 0
+
+        flashLength = 0
+        flash = False
+        morse = encodeToMorse(message)
+
+        while (ctr < len(morse)):
+            if (morse[ctr] == '.'):
+                flashLength = 0.02
+                flash = True
+            elif (morse[ctr] == '-'):
+                flashLength = 0.05
+                flash = True
+            elif (morse[ctr] == ' '):
+                flashLength = 0.08
+                flash = True
+            elif (morse[ctr] == '/'):
+                flashLength = 0.11
+                flash = True
+
+            if (flash):
+                for i in range(len(self.activePins)):
+                    GPIO.output(self.activePins[i],True)
+
+            time.sleep(flashLength)
+            
+            for i in range(len(self.activePins)):
+                GPIO.output(self.activePins[i],False)
+
+            time.sleep(self.SLEEP_DELAY)
+            ctr=ctr+1
+
+        for i in range(len(self.activePins)):
+            GPIO.output(self.activePins[i],False)
+        GPIO.cleanup()
+
+class LIFIServer:
+    timeout = time.time() + 10
+    rawMsg = ""
+    morseMsg = ""
+    message = ""
+
+    rawToMorse = {
+        "-" : ".",
+        "--" : ".",
+        "---" : "-",
+        "----" : "-",
+        "-----" : "-",
+        "------" : " ",
+        "-------" : " ",
+        "--------" : " ",
+        "---------" : " ",
+        "----------" : "/",
+        "-----------" : "/",
+        }
+
+    def convertRawToMorse(self, msg):
+        charBuffer = msg.split()
+        morseBuffer = ""
+        for i in range(len(charBuffer)):
+            morseBuffer += self.rawToMorse[charBuffer[i]]
+        return morseBuffer
+
+    def convertRawToReal(self, msg):
+        morse = self.convertRawToMorse(msg)
+        return decodeMorse(morse)
+            
+    def lightOn(self, channel):
+        curr = ""
+
+        #print "hello?"
+        self.timeout = time.time() + 0.5
+        while (GPIO.input(channel) == GPIO.HIGH):
+            curr += "-"
+            time.sleep(0.01)
+
+        curr += " "
+        self.rawMsg += curr
+
+
+    def readMessage(self):
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(18, GPIO.IN)
+
+        GPIO.add_event_detect(18, GPIO.RISING, callback=self.lightOn)
+
+        while (True):
+            if (time.time() > self.timeout):
+                break
+
+        #print "?"
+        print self.convertRawToReal(self.rawMsg)
+        self.rawMsg = ""
+        self.timeout = time.time() + 15
+        GPIO.remove_event_detect(18)
+        try:
+            sys.stderr.close()
+        except:
+            pass
+
+        GPIO.cleanup()
+
+if __name__ == "__main__":
+    server = LIFIServer()
+    client = LIFIClient()
     
-    
-GPIO.setmode(GPIO.BOARD)
+    if (len(sys.argv) > 1):
+        #while (True):
+            print "Listening..."
+            server.readMessage()
+            m = raw_input("Enter a message: ")
+            client.sendMessage(m)
+            print "Listening..."
+            server.readMessage()
+            #sys.stdout.flush()
+            #print "Waiting for message..."
+            #server.readMessage()
 
-activePins = [7, 11, 13, 15]
-SLEEP_DELAY = 0.5
-NUMBER_OF_ITERATIONS = 200#int(math.floor(1/SLEEP_DELAY))
-
-testCode = ".... . .-.. .-.. --- / -.. .- .. .-.. -.-- / .--. .-. --- --. .-. .- -- -- . .-. / --. --- --- -.. / .-.. ..- -.-. -.- / --- -. / - .... . / -.-. .... .- .-.. .-.. . -. --. . ... / - --- -.. .- -.-- "
-print decodeMorse(testCode)
-
-print "Number of iterations: ", NUMBER_OF_ITERATIONS
-
-message = "Hi Matt"
-for i in range(len(activePins)):
-    GPIO.setup(activePins[i],GPIO.OUT)
-
-ctr = 0
-
-flashLength = 0
-flash = False
-morse = encodeToMorse(message)
-print morse
-#while (ctr != NUMBER_OF_ITERATIONS):
-while (ctr < len(morse)):
-    if (morse[ctr] == '.'):
-        flashLength = 0.1
-        #flashLength = 0.05
-        flash = True
-    elif (morse[ctr] == '-'):
-        flashLength = 0.5
-        #flashLength = 0.1
-        flash = True
-    elif (morse[ctr] == ' '):
-        flashLength = 1
-        flash = True
-    elif (morse[ctr] == '/'):
-        flashLength = 0.3
-        flash = True
-
-    if (flash):
-        for i in range(len(activePins)):
-            GPIO.output(activePins[i],True)
-
-    #print "before sleep"
-    time.sleep(flashLength)
-    #print "after sleep"
-    
-    for i in range(len(activePins)):
-        GPIO.output(activePins[i],False)
-
-    time.sleep(SLEEP_DELAY)
-        #time.sleep(SLEEP_DELAY)
-        #if (ctr % 2 == 0):
-        #    GPIO.output(activePins[i],True)
-        #else:
-        #    GPIO.output(activePins[i],False)
-        #time.sleep(SLEEP_DELAY)
-        #GPIO.output(activePins[i],True)
-    #time.sleep(SLEEP_DELAY)
-    ctr=ctr+1
-
-for i in range(len(activePins)):
-    GPIO.output(activePins[i],False)
-GPIO.cleanup()
-
-
-
-
+    else:
+        #while (True):
+            m = raw_input("Enter a message: ")
+            client.sendMessage(m)
+            print "Waiting for message..."
+            server.readMessage()
+            m = raw_input("Enter a message: ")
+            client.sendMessage(m)
+            #message = raw_input("Enter a message: ")
+            #client.sendMessage(message)
 
