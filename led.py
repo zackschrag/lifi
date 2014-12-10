@@ -52,7 +52,8 @@ class LIFIClient:
         GPIO.cleanup()
 
 class LIFIServer:
-    timeout = time.time() + 10
+    MESSAGE_WAIT = 300
+    timeout = time.time() + MESSAGE_WAIT
     rawMsg = ""
     morseMsg = ""
     message = ""
@@ -85,7 +86,6 @@ class LIFIServer:
     def lightOn(self, channel):
         curr = ""
 
-        #print "hello?"
         self.timeout = time.time() + 0.5
         while (GPIO.input(channel) == GPIO.HIGH):
             curr += "-"
@@ -105,10 +105,19 @@ class LIFIServer:
             if (time.time() > self.timeout):
                 break
 
-        #print "?"
-        print self.convertRawToReal(self.rawMsg)
+        realMsg = self.convertRawToReal(self.rawMsg)
+        if (realMsg == "EXIT"):
+            print "Connection closed by peer"
+            try:
+                sys.stderr.close()
+            except:
+                pass
+
+            GPIO.cleanup()
+            exit()
+        print realMsg
         self.rawMsg = ""
-        self.timeout = time.time() + 15
+        self.timeout = time.time() + self.MESSAGE_WAIT
         GPIO.remove_event_detect(18)
         try:
             sys.stderr.close()
@@ -122,25 +131,22 @@ if __name__ == "__main__":
     client = LIFIClient()
     
     if (len(sys.argv) > 1):
-        #while (True):
+        while (True):
             print "Listening..."
             server.readMessage()
             m = raw_input("Enter a message: ")
+            if (m == "exit"):
+                client.sendMessage(m)
+                exit()
             client.sendMessage(m)
-            print "Listening..."
-            server.readMessage()
-            #sys.stdout.flush()
-            #print "Waiting for message..."
-            #server.readMessage()
 
     else:
-        #while (True):
+        while (True):
             m = raw_input("Enter a message: ")
+            if (m == "exit"):
+                client.sendMessage(m)
+                exit()
             client.sendMessage(m)
             print "Waiting for message..."
             server.readMessage()
-            m = raw_input("Enter a message: ")
-            client.sendMessage(m)
-            #message = raw_input("Enter a message: ")
-            #client.sendMessage(message)
 
