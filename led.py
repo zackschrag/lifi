@@ -6,7 +6,7 @@ from morse import encodeToMorse
 from morse import decodeMorse
 
 class LIFIClient:  
-    activePins = [7, 11, 13, 15]
+    activePins = [7]
     SLEEP_DELAY = 0.05
 
     def sendMessage(self, message):
@@ -18,26 +18,20 @@ class LIFIClient:
         ctr = 0
 
         flashLength = 0
-        flash = False
         morse = encodeToMorse(message)
 
         while (ctr < len(morse)):
             if (morse[ctr] == '.'):
                 flashLength = 0.02
-                flash = True
             elif (morse[ctr] == '-'):
                 flashLength = 0.05
-                flash = True
             elif (morse[ctr] == ' '):
                 flashLength = 0.08
-                flash = True
             elif (morse[ctr] == '/'):
                 flashLength = 0.11
-                flash = True
 
-            if (flash):
-                for i in range(len(self.activePins)):
-                    GPIO.output(self.activePins[i],True)
+            for i in range(len(self.activePins)):
+                GPIO.output(self.activePins[i],True)
 
             time.sleep(flashLength)
             
@@ -129,7 +123,8 @@ class LIFIServer:
 if __name__ == "__main__":
     server = LIFIServer()
     client = LIFIClient()
-    
+
+    print "To close the program, type 'exit' when prompted to enter a message"
     if (len(sys.argv) > 1):
         while (True):
             print "Listening..."
