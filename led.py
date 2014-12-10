@@ -7,7 +7,7 @@ from morse import decodeMorse
 
 class LIFIClient:  
     activePins = [7]
-    SLEEP_DELAY = 0.05
+    SLEEP_DELAY = 0.01
 
     def sendMessage(self, message):
         GPIO.setmode(GPIO.BOARD)
@@ -81,7 +81,7 @@ class LIFIServer:
         curr = ""
 
         self.timeout = time.time() + 0.5
-        while (GPIO.input(channel) == GPIO.HIGH):
+        while (GPIO.input(channel) == GPIO.HIGH):            
             curr += "-"
             time.sleep(0.01)
 
